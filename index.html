@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minutas Legales Colombia</title>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- Librerías procesamiento Word -->
+  <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+
+  <!-- Wompi Checkout Widget (Pasarela de pagos Colombia) -->
+  <script src="https://checkout.wompi.co/widget.js"></script>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <script>
+    /* Recargar la página si el navegador la restaura desde la memoria
+       de fondo (bfcache) — evita que se vea la versión vieja al volver
+       a la pestaña sin recargar manualmente. */
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted) { window.location.reload(); }
+    });
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="config-banner">
+  ⚠️ <strong>Supabase no está configurado.</strong> Edita el archivo e ingresa tus valores de <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code>.
+  <a href="https://supabase.com/dashboard" target="_blank">Ir a Supabase Dashboard →</a>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="logo" onclick="showSection('inicio');cerrarMenuMovil()">
+      <div class="logo-icon">⚖️</div>
+      <span>Minutas Legales</span>
+    </div>
+    <nav>
+      <button class="nav-link active" id="nav-inicio" onclick="showSection('inicio')">Inicio</button>
+      <button class="nav-link" id="nav-minutas" onclick="showSection('minutas')">Minutas</button>
+      <button class="nav-link" id="nav-usuarios" onclick="showSection('usuarios')">Usuarios</button>
+      <button class="nav-link" id="nav-asesoria" onclick="showSection('asesoria')">Asesoría</button>
+      <button class="nav-link" id="nav-monitoreo" onclick="showSection('monitoreo')">Monitoreo</button>
+      <button class="nav-link accent-nav" id="nav-admin" style="display:none;" onclick="showSection('admin')">Admin</button>
+    </nav>
+    <div class="auth-bar">
+      <div id="auth-logged-out">
+        <button class="btn btn-outline-white btn-sm" onclick="showSection('usuarios')">Iniciar sesión</button>
+      </div>
+      <div id="auth-logged-in">
+        <span id="user-email"></span>
+        <button class="btn btn-outline-white btn-sm" id="btn-logout">Salir</button>
+      </div>
+    </div>
+    <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMenuMovil()" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- MENÚ MÓVIL -->
+<div class="mobile-menu" id="mobile-menu" onclick="cerrarMenuMovilFondo(event)">
+  <div class="mobile-menu-panel">
+    <button class="nav-link" id="nav-inicio-mobile" onclick="showSection('inicio');cerrarMenuMovil()">Inicio</button>
+    <button class="nav-link" id="nav-minutas-mobile" onclick="showSection('minutas');cerrarMenuMovil()">Minutas</button>
+    <button class="nav-link" id="nav-usuarios-mobile" onclick="showSection('usuarios');cerrarMenuMovil()">Usuarios</button>
+    <button class="nav-link" id="nav-asesoria-mobile" onclick="showSection('asesoria');cerrarMenuMovil()">Asesoría</button>
+    <button class="nav-link" id="nav-monitoreo-mobile" onclick="showSection('monitoreo');cerrarMenuMovil()">Monitoreo</button>
+    <button class="nav-link accent-nav" id="nav-admin-mobile" style="display:none;" onclick="showSection('admin');cerrarMenuMovil()">Admin</button>
+    <div class="auth-bar-mobile">
+      <div id="mobile-auth-logged-out">
+        <button class="btn btn-accent" onclick="showSection('usuarios');cerrarMenuMovil()">Iniciar sesión</button>
+      </div>
+      <div id="mobile-auth-logged-in" style="display:none;">
+        <p class="mobile-user-info" id="mobile-user-email-text"></p>
+        <button class="btn btn-outline-white" id="btn-logout-mobile">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- INICIO -->
+<section class="section active" id="inicio">
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <h1>Minutas Legales<br><span>para Colombia</span></h1>
+        <p>Documentos jurídicos personalizados y listos para usar. Redactados por expertos, adaptados a tu situación. Descarga al instante.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-accent" onclick="showSection('minutas')">Ver minutas disponibles</button>
+          <button class="btn btn-outline-white" onclick="showSection('usuarios')">Crear cuenta gratis</button>
+        </div>
+        <div class="hero-status-pill" id="hero-status-pill" aria-live="polite">
+          <span class="hsp-dot" aria-hidden="true"></span>
+          <span class="hsp-text" id="hero-status-pill-text">Cargando catálogo…</span>
+        </div>
+      </div>
+      <div class="hero-mockup" aria-hidden="true">
+        <!-- Mockup compuesto en HTML/CSS: navegador (escritorio) + teléfono -->
+        <div class="device-mockup">
+
+          <!-- Navegador / escritorio -->
+          <div class="dm-browser">
+            <div class="dm-browser-bar">
+              <span class="dm-dot dm-dot-r"></span>
+              <span class="dm-dot dm-dot-y"></span>
+              <span class="dm-dot dm-dot-g"></span>
+              <div class="dm-url">minutaslegales.com / catálogo</div>
+            </div>
+            <div class="dm-browser-body">
+              <div class="dm-bb-head">
+                <div class="dm-bb-eyebrow">Catálogo</div>
+                <div class="dm-bb-title">Minutas Legales</div>
+                <div class="dm-bb-rule"></div>
+              </div>
+              <div class="dm-bb-grid">
+                <div class="dm-card">
+                  <div class="dm-card-tag">Civil</div>
+                  <div class="dm-card-title">Contrato de arrendamiento</div>
+                  <div class="dm-card-line"></div>
+                  <div class="dm-card-line short"></div>
+                  <div class="dm-card-foot">
+                    <span class="dm-price">$ 18.000</span>
+                    <span class="dm-cta">Adquirir</span>
+                  </div>
+                </div>
+                <div class="dm-card">
+                  <div class="dm-card-tag">Familia</div>
+                  <div class="dm-card-title">Acuerdo de divorcio</div>
+                  <div class="dm-card-line"></div>
+                  <div class="dm-card-line short"></div>
+                  <div class="dm-card-foot">
+                    <span class="dm-price">$ 20.000</span>
+                    <span class="dm-cta">Adquirir</span>
+                  </div>
+                </div>
+                <div class="dm-card dm-card-hide-sm">
+                  <div class="dm-card-tag">Comercial</div>
+                  <div class="dm-card-title">Constitución de SAS</div>
+                  <div class="dm-card-line"></div>
+                  <div class="dm-card-line short"></div>
+                  <div class="dm-card-foot">
+                    <span class="dm-price">$ 15.000</span>
+                    <span class="dm-cta">Adquirir</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Teléfono superpuesto: previsualización de la minuta -->
+          <div class="dm-phone">
+            <div class="dm-phone-notch"></div>
+            <div class="dm-phone-screen">
+              <!-- Barra de estado del teléfono -->
+              <div class="dm-phone-bar">
+                <span class="dm-phone-time">9:41</span>
+                <span class="dm-phone-icons">
+                  <span class="dm-pi dm-pi-signal" title="Señal">
+                    <i></i><i></i><i></i><i></i>
+                  </span>
+                  <span class="dm-pi dm-pi-wifi"></span>
+                  <span class="dm-pi dm-pi-battery"><i></i></span>
+                </span>
+              </div>
+
+              <!-- Cabecera tipo app -->
+              <div class="dm-app-head">
+                <span class="dm-app-back">‹</span>
+                <span class="dm-app-title">Minuta</span>
+                <span class="dm-app-live">
+                  <span class="dm-app-live-dot"></span>EN VIVO
+                </span>
+              </div>
+
+              <!-- Stepper de progreso -->
+              <div class="dm-app-steps">
+                <span class="dm-step done">1</span>
+                <span class="dm-step-line done"></span>
+                <span class="dm-step active">2</span>
+                <span class="dm-step-line"></span>
+                <span class="dm-step">3</span>
+              </div>
+
+              <!-- Hoja del documento -->
+              <div class="dm-doc">
+                <div class="dm-doc-eyebrow">Vista previa · borrador</div>
+                <div class="dm-doc-title">Contrato de<br/>Arrendamiento</div>
+                <div class="dm-doc-rule"></div>
+
+                <p class="dm-doc-p">
+                  Entre los suscritos a saber, <span class="dm-ph">Juan Pérez</span>,
+                  mayor de edad, identificado con C.C.
+                  <span class="dm-ph">1.020.345</span>, con domicilio en <span class="dm-ph">Bogotá D.C.</span>
+                </p>
+
+                <div class="dm-doc-sign">
+                  <div class="dm-doc-sign-line"></div>
+                  <div class="dm-doc-sign-label">Firma · Arrendador</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">📄</div>
+      <h3>Documentos personalizados</h3>
+      <p>Cada minuta se adapta con tus datos. Descarga el documento listo para firmar.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>Redacción con IA</h3>
+      <p>Describe los hechos y pretensiones con tus propias palabras. La IA los redacta de forma formal y jurídica.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💳</div>
+      <h3>Pago seguro</h3>
+      <p>PSE, tarjeta de crédito/débito, Nequi y Daviplata. 100% seguro.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🇨🇴</div>
+      <h3>Marco legal colombiano</h3>
+      <p>Documentos ajustados a la legislación colombiana vigente.</p>
+    </div>
+  </div>
+  <div class="cta-section">
+    <h2>¿Listo para obtener tu minuta?</h2>
+    <p>Regístrate gratis y accede al catálogo completo de documentos legales.</p>
+    <button class="btn btn-primary" onclick="showSection('minutas')">Ver catálogo de minutas</button>
+  </div>
+</section>
+
+<!-- MINUTAS -->
+<section class="section" id="minutas">
+  <div class="page-header">
+    <h2>Catálogo de Minutas</h2>
+    <p>Elige el documento, personalízalo y descárgalo al instante</p>
+  </div>
+  <div class="minutas-toolbar">
+    <div class="buscador-wrap">
+      <input type="search" id="buscador" placeholder="Buscar minutas..." />
+    </div>
+    <div class="filtros" id="filtros-container">
+      <button class="filtro-btn active" data-cat="todos">Todas</button>
+    </div>
+  </div>
+  <div class="minutas-grid" id="minutas-grid">
+    <div class="loading-spinner"></div>
+  </div>
+  <div class="pagination" id="minutas-pagination"></div>
+  <p id="minutas-empty">No hay minutas disponibles aún.</p>
+</section>
+
+<!-- USUARIOS -->
+<section class="section" id="usuarios">
+  <div id="view-auth">
+    <div class="auth-page">
+      
+        <div class="auth-split">
+
+          <!-- ══════════════════════════════════
+               PANEL IZQUIERDO — FORMULARIO
+          ══════════════════════════════════ -->
+          <div class="auth-panel-wrap">
+            <div class="auth-panel">
+
+              <div class="auth-brand">
+                <div class="auth-brand-icon" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="32" y1="6" x2="32" y2="50" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="16" x2="52" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12 16L4 30a8 8 0 0016 0L12 16z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    <path d="M52 16L44 30a8 8 0 0016 0L52 16z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    <line x1="22" y1="56" x2="42" y2="56" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="32" y1="50" x2="32" y2="56" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="32" cy="10" r="3" fill="currentColor"/>
+                  </svg>
+                  <div class="auth-brand-icon-glow" aria-hidden="true"></div>
+                </div>
+                <h2 class="auth-brand-name">Minutas Legales Colombia</h2>
+                <div class="auth-brand-flag">
+                  <span class="flag-y"></span>
+                  <span class="flag-b"></span>
+                  <span class="flag-r"></span>
+                </div>
+                <p class="auth-brand-tagline">Tu asistente jurídico digital</p>
+              </div>
+
+              <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Iniciar sesión</button>
+                <button class="auth-tab" id="tab-register-btn" onclick="switchAuthTab('register')">Crear cuenta</button>
+              </div>
+
+              <!-- ── Formulario: Iniciar sesión ── -->
+              <div class="auth-form-wrap active" id="auth-form-login">
+                <form id="form-login">
+                  <div class="auth-field">
+                    <label class="auth-field-label" for="login-email">Correo electrónico</label>
+                    <div class="auth-input-wrap">
+                      <svg class="auth-input-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                      <input type="email" id="login-email" class="auth-input" placeholder="tucorreo@ejemplo.com" required autocomplete="email" />
+                    </div>
+                  </div>
+                  <div class="auth-field">
+                    <label class="auth-field-label" for="login-password">Contraseña</label>
+                    <div class="auth-input-wrap">
+                      <svg class="auth-input-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                      <input type="password" id="login-password" class="auth-input has-toggle" placeholder="••••••••" required autocomplete="current-password" />
+                      <button type="button" class="auth-toggle-pass" onclick="toggleAuthPassword('login-password', this)" aria-label="Mostrar contraseña">
+                        <svg class="auth-eye" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.4"/></svg>
+                        <svg class="auth-eye-slash" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.4"/><path d="M2.5 2.5l15 15"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="auth-form-row">
+                    <label class="auth-checkbox">
+                      <input type="checkbox" id="login-remember" checked />
+                      <span>Recordar sesión</span>
+                    </label>
+                    <button type="button" class="auth-forgot-link" onclick="mostrarRecuperacion()">¿Olvidaste tu contraseña?</button>
+                  </div>
+                  <button type="submit" class="auth-submit-btn" id="btn-login">Iniciar Sesión</button>
+                </form>
+              </div>
+
+              <!-- ── Panel recuperación de contraseña ── -->
+              <div class="auth-form-wrap" id="auth-form-recuperar">
+                <div class="auth-recuperar-back">
+                  <button type="button" class="auth-back-btn" onclick="ocultarRecuperacion()">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
+                    Volver al inicio de sesión
+                  </button>
+                </div>
+                <div id="recuperar-idle">
+                  <p class="auth-recuperar-desc">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+                  <form id="form-recuperar">
+                    <div class="auth-field">
+                      <label class="auth-field-label" for="recuperar-email">Correo electrónico</label>
+                      <div class="auth-input-wrap">
+                        <svg class="auth-input-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                        <input type="email" id="recuperar-email" class="auth-input" placeholder="tu@correo.com" required autocomplete="email" />
+                      </div>
+                    </div>
+                    <button type="submit" class="auth-submit-btn" id="btn-recuperar">Enviar enlace</button>
+                  </form>
+                </div>
+                <div id="recuperar-ok" style="display:none;">
+                  <div class="auth-recuperar-ok">
+                    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="52" height="52">
+                      <circle cx="24" cy="24" r="22" fill="#e6f4ea" stroke="#1e7e34" stroke-width="2"/>
+                      <path d="M14 24l7 7 13-13" stroke="#1e7e34" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p class="auth-recuperar-ok-title">Correo enviado</p>
+                    <p class="auth-recuperar-ok-sub">Revisa tu bandeja de entrada y sigue el enlace para crear una nueva contraseña.</p>
+                    <p class="auth-recuperar-spam-nota">Si no ves el correo en unos minutos, revisa tu carpeta de <strong>spam</strong> o <strong>correo no deseado</strong>.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Formulario: Crear cuenta ── -->
+              <div class="auth-form-wrap" id="auth-form-register">
+                <form id="form-register">
+                  <div class="auth-field">
+                    <label class="auth-field-label" for="reg-email">Correo electrónico</label>
+                    <div class="auth-input-wrap">
+                      <svg class="auth-input-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                      <input type="email" id="reg-email" class="auth-input" placeholder="tucorreo@ejemplo.com" required autocomplete="email" />
+                    </div>
+                  </div>
+                  <div class="auth-field">
+                    <label class="auth-field-label" for="reg-password">Contraseña</label>
+                    <div class="auth-input-wrap">
+                      <svg class="auth-input-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                      <input type="password" id="reg-password" class="auth-input has-toggle" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
+                      <button type="button" class="auth-toggle-pass" onclick="toggleAuthPassword('reg-password', this)" aria-label="Mostrar contraseña">
+                        <svg class="auth-eye" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.4"/></svg>
+                        <svg class="auth-eye-slash" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.4"/><path d="M2.5 2.5l15 15"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <button type="submit" class="auth-submit-btn auth-submit-btn--accent" id="btn-register">Crear Cuenta Gratis</button>
+                  <p class="auth-legal">Al registrarte aceptas el uso de tus datos para el servicio.</p>
+                </form>
+              </div>
+
+            </div>
+
+            <div class="auth-particles" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+
+        </div>
+
+    </div>
+  </div>
+
+  <div id="view-perfil" style="display:none;">
+    <div class="page-header">
+      <h2>Mi Perfil</h2>
+      <p>Administra tu cuenta y revisa tu historial de compras</p>
+    </div>
+    <div class="perfil-container">
+      <div class="perfil-col-side">
+        <div class="perfil-card perfil-card-id">
+          <div class="perfil-avatar-ring">
+            <div class="perfil-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#a8893a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+            </div>
+          </div>
+          <div class="perfil-email-display">
+            <strong id="perfil-email-texto"></strong>
+            <span class="perfil-status-pill"><span class="perfil-status-dot"></span>Cuenta activa</span>
+          </div>
+        </div>
+
+        <div class="perfil-card">
+          <div class="perfil-card-head">
+            <span class="perfil-card-icon">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+            </span>
+            <h3>Cambiar correo</h3>
+          </div>
+          <form id="form-cambiar-email">
+            <div class="form-group">
+              <label>Nuevo correo electrónico</label>
+              <input type="email" id="nuevo-email" class="form-control" placeholder="nuevo@correo.com" required />
+            </div>
+            <div class="form-group">
+              <label>Contraseña actual (para confirmar)</label>
+              <input type="password" id="email-password-confirm" class="form-control" placeholder="Tu contraseña actual" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="btn-cambiar-email">Actualizar correo</button>
+          </form>
+        </div>
+
+        <div id="perfil-suscripcion-monitoreo" style="display:none;" class="perfil-card">
+          <!-- Populated by cargarSuscripcionPerfil() -->
+        </div>
+
+        <div class="perfil-card">
+          <div class="perfil-card-head">
+            <span class="perfil-card-icon">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            </span>
+            <h3>Cambiar contraseña</h3>
+          </div>
+          <form id="form-cambiar-pass">
+            <div class="form-group">
+              <label>Contraseña actual</label>
+              <input type="password" id="pass-actual" class="form-control" placeholder="Tu contraseña actual" required />
+            </div>
+            <div class="form-group">
+              <label>Nueva contraseña</label>
+              <input type="password" id="pass-nueva" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6" />
+            </div>
+            <div class="form-group">
+              <label>Confirmar nueva contraseña</label>
+              <input type="password" id="pass-confirmar" class="form-control" placeholder="Repite la nueva contraseña" required minlength="6" />
+            </div>
+            <button type="submit" class="btn btn-outline btn-full" id="btn-cambiar-pass">Actualizar contraseña</button>
+          </form>
+        </div>
+      </div>
+      <div class="perfil-card">
+        <div class="perfil-card-head">
+          <span class="perfil-card-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+          </span>
+          <h3>Historial de Compras</h3>
+        </div>
+        <div id="perfil-historial"><p class="text-muted">Cargando...</p></div>
+        <div class="pagination" id="perfil-historial-pagination"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ASESORÍA -->
+<section class="section" id="asesoria">
+  <div class="asesoria-hero">
+    <h2>Servicios de <span>Asesoría Legal</span></h2>
+    <p>Como abogado colombiano, te ofrezco orientación jurídica personalizada para que tomes las mejores decisiones con respaldo legal experto.</p>
+    <div class="hero-ctas">
+      <a href="https://wa.me/573000000000" target="_blank" class="btn btn-accent">Consultar por WhatsApp</a>
+      <button class="btn btn-outline-white" onclick="document.getElementById('asesoria-contacto-form').scrollIntoView({behavior:'smooth'})">Solicitar asesoría</button>
+    </div>
+  </div>
+
+  <div class="asesoria-servicios">
+    <div class="asesoria-card">
+      <div class="asesoria-icon">📄</div>
+      <h3>Derecho Civil</h3>
+      <p>Contratos, obligaciones, responsabilidad civil, sucesiones, propiedad, posesión y acciones civiles. Te asesoro en procesos civiles ante los juzgados colombianos.</p>
+      <span class="precio-desde">Consulta desde $80.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20en%20Derecho%20Civil" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+    <div class="asesoria-card">
+      <div class="asesoria-icon">👨‍👩‍👧</div>
+      <h3>Derecho de Familia</h3>
+      <p>Divorcios, custodia de menores, alimentos, unión marital de hecho, adopción y liquidación de sociedad conyugal. Protejo tus derechos y los de tu familia.</p>
+      <span class="precio-desde">Consulta desde $80.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20en%20Derecho%20de%20Familia" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+    <div class="asesoria-card">
+      <div class="asesoria-icon">⚖️</div>
+      <h3>Derechos de Petición y Tutelas</h3>
+      <p>Redacción y radicación de derechos de petición ante entidades públicas y privadas. Acciones de tutela para la protección de derechos fundamentales.</p>
+      <span class="precio-desde">Desde $120.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20para%20un%20Derecho%20de%20Petición%20o%20Tutela" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+    <div class="asesoria-card">
+      <div class="asesoria-icon">💼</div>
+      <h3>Derecho Laboral</h3>
+      <p>Despidos injustos, liquidaciones, acoso laboral, contratos de trabajo, demandas laborales ante el SENA y juzgados laborales. Defiendo tus derechos como trabajador o empleador.</p>
+      <span class="precio-desde">Consulta desde $80.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20en%20Derecho%20Laboral" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+    <div class="asesoria-card">
+      <div class="asesoria-icon">🏢</div>
+      <h3>Derecho Comercial y Societario</h3>
+      <p>Constitución de empresas, contratos comerciales, acuerdos de socios, resolución de conflictos societarios y obligaciones mercantiles según el Código de Comercio colombiano.</p>
+      <span class="precio-desde">Consulta desde $100.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20en%20Derecho%20Comercial" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+    <div class="asesoria-card">
+      <div class="asesoria-icon">🏛️</div>
+      <h3>Derecho Administrativo</h3>
+      <p>Recursos de reposición y apelación, nulidades de actos administrativos, demandas ante el Consejo de Estado y tribunales administrativos, contratos estatales.</p>
+      <span class="precio-desde">Consulta desde $100.000 COP</span>
+      <a href="https://wa.me/573000000000?text=Hola%2C%20necesito%20asesoría%20en%20Derecho%20Administrativo" target="_blank" class="btn btn-primary btn-sm">Consultar</a>
+    </div>
+  </div>
+
+  <div class="asesoria-info-strip">
+    <div class="asesoria-info-box">
+      <h3>¿Cómo funciona la asesoría?</h3>
+      <div class="asesoria-proceso">
+        <div class="asesoria-paso">
+          <div class="asesoria-paso-num">1</div>
+          <h4>Contacto inicial</h4>
+          <p>Cuéntame tu situación por WhatsApp o correo. Sin compromiso.</p>
+        </div>
+        <div class="asesoria-paso">
+          <div class="asesoria-paso-num">2</div>
+          <h4>Evaluación del caso</h4>
+          <p>Analizo tu situación jurídica y te explico las opciones disponibles.</p>
+        </div>
+        <div class="asesoria-paso">
+          <div class="asesoria-paso-num">3</div>
+          <h4>Estrategia legal</h4>
+          <p>Definimos juntos el mejor camino a seguir según tu caso.</p>
+        </div>
+        <div class="asesoria-paso">
+          <div class="asesoria-paso-num">4</div>
+          <h4>Acompañamiento</h4>
+          <p>Te represento y acompaño en todo el proceso legal.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="asesoria-contacto" id="asesoria-contacto-form">
+    <h3>¿Tienes una consulta legal?</h3>
+    <p>No enfrentes tu situación jurídica solo. Con una consulta puedes conocer tus derechos y las mejores opciones para tu caso.</p>
+    <div class="asesoria-contacto-btns">
+      <a href="https://wa.me/573000000000?text=Hola%2C%20quisiera%20una%20asesoría%20legal" target="_blank" class="btn btn-accent">WhatsApp directo</a>
+      <a href="mailto:contacto@minutaslegales.com" class="btn btn-outline-white">Enviar correo</a>
+    </div>
+    <p style="margin-top:20px;opacity:0.7;font-size:0.85rem;">Respuesta en menos de 24 horas hábiles. Atención en todo el territorio colombiano.</p>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section class="section" id="admin">
+  <div class="admin-layout">
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-head">
+        <div class="admin-sidebar-eyebrow">Panel</div>
+        <h2>Administración</h2>
+        <p>Gestiona minutas, categorías y configuración del sistema.</p>
+      </div>
+      <nav class="admin-sidebar-nav">
+        <button class="admin-tab-btn active" onclick="cambiarTabAdmin('tab-agregar', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+          <span>Agregar Minuta</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-categorias', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+          <span>Categorías y Minutas</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-historial', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+          <span>Historial de Pagos</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-ia', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
+          <span>Configuración IA</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-wompi', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+          <span>Pasarela de Pago</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-prueba', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+          <span>Modo Prueba</span>
+        </button>
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-monitoreo-planes', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clip-rule="evenodd"/></svg>
+          <span>Planes Monitoreo</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-content">
+
+    <!-- PESTAÑA 1: Agregar Minuta -->
+    <div class="admin-tab-panel active" id="tab-agregar">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+          Agregar Nueva Minuta
+        </h3>
+        <form id="form-nueva-minuta">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="adm-nombre" class="form-control" placeholder="Ej: Contrato de Arrendamiento" required />
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="adm-descripcion" class="form-control" placeholder="Describe brevemente el documento..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Categoría</label>
+            <select id="adm-categoria" class="form-control">
+              <option value="">Cargando categorías...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Contexto adicional para la IA <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem;">(opcional)</span></label>
+            <textarea id="adm-contexto-ia" class="form-control" rows="3"
+              placeholder="Ej: Tutela contra EPS por negación de medicamentos para enfermedad crónica. Usar lenguaje empático y referirse al accionante como paciente cuando sea apropiado."></textarea>
+            <p class="form-hint">Subdominio o instrucciones específicas que la IA debe tener en cuenta al redactar (jurisprudencia relevante, vocabulario, audiencia, tono, etc.). Déjalo vacío si no aplica.</p>
+          </div>
+          <div class="form-group">
+            <label>Tipo de documento (para la IA)</label>
+            <select id="adm-tipo-documento" class="form-control">
+              <option value="">Auto-detectar (recomendado)</option>
+              <option value="demanda">Demanda judicial (demandante / demandado)</option>
+              <option value="peticion">Derecho de petición (peticionario / entidad)</option>
+              <option value="tutela">Acción de tutela (accionante / accionado)</option>
+              <option value="queja">Queja o reclamación (quejoso / entidad)</option>
+              <option value="denuncia">Denuncia (denunciante / denunciado)</option>
+              <option value="recurso">Recurso (recurrente / autoridad)</option>
+              <option value="contrato">Contrato (parte / parte)</option>
+              <option value="poder">Poder o mandato (poderdante / apoderado)</option>
+              <option value="desistimiento">Desistimiento o renuncia</option>
+              <option value="generico">Documento legal genérico</option>
+            </select>
+            <p class="form-hint">Le indica a la IA cómo referirse al usuario y a la contraparte. Si lo dejas en "Auto-detectar", se infiere del nombre y la categoría.</p>
+          </div>
+          <div class="form-group">
+            <label>Precio (COP)</label>
+            <input type="number" id="adm-precio" class="form-control" placeholder="50000" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Campos personalizables (una línea)</label>
+            <input type="text" id="adm-campos" class="form-control" placeholder="NOMBRE ARRENDADOR, NOMBRE ARRENDATARIO, FECHA" />
+            <p class="form-hint">Campos cortos: nombre, fecha, dirección, cédula, etc. Escribe los marcadores <strong>exactamente</strong> como aparecen en el Word, separados por comas. Déjalo vacío si no tienes campos de este tipo.</p>
+          </div>
+          <div class="form-group">
+            <label>Campos con espacio libre para escribir</label>
+            <input type="text" id="adm-campos-largo-nombres" class="form-control" placeholder="HECHOS, PRETENSIONES, FUNDAMENTOS" />
+            <p class="form-hint">Campos donde el usuario puede escribir textos largos con saltos de línea (hechos, cláusulas, pretensiones, etc.). Se insertan <em>tal cual</em> en el Word con múltiples párrafos. Déjalo vacío si no tienes campos de este tipo.</p>
+          </div>
+          <div class="form-group">
+            <label>Archivo Word de trabajo (.docx) — para generación del documento final</label>
+            <input type="file" id="adm-archivo" class="form-control"
+              accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            <div id="file-info" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;display:none;"></div>
+            <p class="form-hint">Este Word contiene los <strong>marcadores exactos</strong> (ej: <code>NOMBRE ARRENDADOR</code>) que se reemplazarán. Los clientes <strong>nunca</strong> verán este archivo — solo se usa para generar el documento final. Para archivos mayores a 700 KB se guarda automáticamente en Supabase Storage.</p>
+          </div>
+          <div class="form-group">
+            <label>Archivo Word de previsualización (.docx) — opcional, lo que verán los clientes</label>
+            <input type="file" id="adm-archivo-preview" class="form-control"
+              accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            <div id="file-preview-info" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;display:none;"></div>
+            <p class="form-hint">Versión limpia sin marcadores, con texto de ejemplo. Los clientes verán <strong>este</strong> archivo en la previsualización de 10 segundos. Si no subes ninguno, la previsualización mostrará solo la descripción.</p>
+          </div>
+          <div id="eleccion-question-box" style="display:none;margin-bottom:16px;">
+            <div class="ai-question-box">
+              <p>¿Este documento tiene cláusulas opcionales (ELECCION USUARIO)?</p>
+              <p class="ai-sub">Si el Word contiene bloques marcados con <strong>ELECCION USUARIO</strong> al inicio y al final, el sistema preguntará al cliente si desea incluir o excluir cada cláusula. Para cada cláusula que el cliente incluya, puedes definir campos adicionales personalizables.</p>
+              <div class="ai-question-btns">
+                <button type="button" class="btn btn-primary btn-sm" onclick="confirmarEleccionUsuario(true)">Sí, tiene cláusulas opcionales</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="confirmarEleccionUsuario(false)">No</button>
+              </div>
+            </div>
+            <div id="eleccion-detected-result" style="display:none;margin-top:12px;"></div>
+          </div>
+
+          <div id="ai-question-box" class="ai-question-box" style="display:none;">
+            <p>¿Este documento tiene espacios para redacción con IA?</p>
+            <p class="ai-sub">Escribe en el Word los marcadores exactamente así: <strong>ESPACIO PARA EL TEXTO DE LA IA1 (HECHOS)</strong>, <strong>ESPACIO PARA EL TEXTO DE LA IA2 (PRETENSIONES)</strong>, etc. El número y la etiqueta entre paréntesis son obligatorios.</p>
+            <div class="ai-question-btns">
+              <button type="button" class="btn btn-primary btn-sm" onclick="confirmarCamposIA(true)">Sí, tiene espacios de IA</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="confirmarCamposIA(false)">No</button>
+            </div>
+            <div id="ai-placeholders-result" class="ai-placeholders-detected" style="display:none;"></div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="btn-guardar-minuta">Guardar Minuta</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: Categorías y Minutas Publicadas -->
+    <div class="admin-tab-panel" id="tab-categorias">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>
+          Gestionar Categorías
+        </h3>
+        <div class="cat-add-row">
+          <input type="text" id="nueva-cat-input" class="form-control" placeholder="Ej: Familia" />
+          <button class="btn btn-primary btn-sm" onclick="agregarCategoria()">Agregar</button>
+        </div>
+        <div class="cat-tag-list" id="cat-tag-list">
+          <span class="text-muted">Cargando...</span>
+        </div>
+      </div>
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+          Minutas Publicadas
+        </h3>
+        <div id="admin-minutas-list"><p class="text-muted">Cargando...</p></div>
+        <div class="pagination" id="admin-minutas-pagination"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 3: Historial de Pagos -->
+    <div class="admin-tab-panel" id="tab-historial">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+          Historial de Ventas
+        </h3>
+        <div style="margin-bottom:18px;padding:14px 18px;background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <p style="font-size:0.9rem;font-weight:700;color:#856404;margin-bottom:2px;">⚠️ Reiniciar registros de compras-ventas</p>
+            <p style="font-size:0.8rem;color:#856404;">Elimina permanentemente todos los registros de ventas. Las minutas, categorías y configuración no se borran.</p>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="reiniciarVentas()">Reiniciar todo</button>
+        </div>
+        <div id="admin-ventas-list"><p class="text-muted">Cargando...</p></div>
+        <div class="pagination" id="admin-ventas-pagination"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 4: Configuración IA -->
+    <div class="admin-tab-panel" id="tab-ia">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/></svg>
+          Configurar IA — Groq (Gratis)
+        </h3>
+        <p class="form-hint" style="margin-bottom:14px;">
+          Groq es <strong>gratuito</strong>, sin tarjeta de crédito. Crea tu cuenta y obtén tu clave en
+          <a href="https://console.groq.com/keys" target="_blank" style="color:var(--primary-light);font-weight:600;">console.groq.com/keys →</a>
+        </p>
+        <form id="form-gemini-config" onsubmit="guardarOpenAIConfig(event)">
+          <div class="form-group">
+            <label>Clave de API de Groq</label>
+            <input type="text" id="gemini-api-key" class="form-control" placeholder="gsk_..." autocomplete="off" />
+            <p class="form-hint">La clave se guarda en Supabase. En Groq Console: <em>API Keys → Create API Key</em>.</p>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btn-guardar-gemini">Guardar clave de Groq</button>
+        </form>
+        <div id="gemini-config-status" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 5: Pasarela de Pago Wompi -->
+    <div class="admin-tab-panel" id="tab-wompi">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+          Configurar Pasarela de Pago (Wompi)
+        </h3>
+        <p class="form-hint" style="margin-bottom:14px;">
+          Configura tu cuenta de <a href="https://comercios.wompi.co" target="_blank" style="color:var(--primary-light);font-weight:600;">Wompi</a> para recibir pagos en línea.
+        </p>
+        <form id="form-wompi-config" onsubmit="guardarWompiConfig(event)">
+          <div class="form-group">
+            <label>Llave pública de Wompi</label>
+            <input type="text" id="wompi-public-key" class="form-control" placeholder="pub_test_... o pub_prod_..." />
+            <p class="form-hint">La encuentras en tu panel de Wompi: Desarrolladores → Llaves de API.</p>
+          </div>
+          <div class="form-group">
+            <label>Secreto de integridad (opcional)</label>
+            <input type="text" id="wompi-integrity-secret" class="form-control" placeholder="test_integrity_... o prod_integrity_..." />
+          </div>
+          <div class="form-group">
+            <label>Modo</label>
+            <select id="wompi-mode" class="form-control">
+              <option value="test">Pruebas (Sandbox)</option>
+              <option value="prod">Producción (Real)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btn-guardar-wompi">Guardar configuración Wompi</button>
+        </form>
+        <div id="wompi-config-status" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 6: Modo Prueba -->
+    <div class="admin-tab-panel" id="tab-prueba">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+          Modo Prueba de Pagos
+        </h3>
+        <p class="form-hint" style="margin-bottom:16px;">
+          Activa el modo prueba para simular compras sin procesar pagos reales. Ideal para verificar que la generación de documentos funciona correctamente antes de lanzar a clientes reales.
+        </p>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:14px 18px;background:rgba(26,58,92,0.04);border-radius:8px;border:1px solid var(--border);">
+          <label style="font-size:0.95rem;font-weight:600;color:var(--text);">Estado actual:</label>
+          <span id="modo-prueba-estado" style="font-size:0.95rem;color:var(--text-muted);font-weight:600;">Desactivado</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-accent" onclick="activarModoPrueba()">Activar modo prueba</button>
+          <button class="btn btn-outline" onclick="desactivarModoPrueba()">Desactivar</button>
+        </div>
+        <p class="form-hint" style="margin-top:14px;padding:10px 14px;background:#fff3cd;border-radius:8px;border:1px solid #ffc107;color:#856404;">
+          ⚠️ Recuerda desactivarlo antes de lanzar a tus clientes reales.
+        </p>
+      </div>
+    </div>
+
+    <!-- PESTAÑA: Planes Monitoreo -->
+    <div class="admin-tab-panel" id="tab-monitoreo-planes">
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clip-rule="evenodd"/></svg>
+          Planes de Monitoreo Jurídico
+        </h3>
+        <p class="form-hint" style="margin-bottom:20px;">
+          Configura los precios de acceso al Monitoreo Jurídico. Los usuarios verán estos precios antes de suscribirse. El pago es único (de por vida) por plan.
+        </p>
+        <form id="form-monitoreo-planes" onsubmit="guardarPlanesMonitoreo(event)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Precio Plan Básico (COP)</label>
+              <input type="number" id="mon-precio-basico" class="form-control" placeholder="49000" min="0" step="1000" />
+              <p class="form-hint">Hasta 20 procesos simultáneos.</p>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Precio Plan Premium (COP)</label>
+              <input type="number" id="mon-precio-premium" class="form-control" placeholder="99000" min="0" step="1000" />
+              <p class="form-hint">Procesos ilimitados.</p>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btn-guardar-mon-planes">Guardar precios</button>
+        </form>
+        <div id="mon-planes-status" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="admin-tab-card" style="margin-top:16px;">
+        <h3>Suscriptores del Monitoreo</h3>
+        <p class="form-hint" style="margin-bottom:14px;">Usuarios que han pagado por el servicio de Monitoreo Jurídico.</p>
+        <div id="mon-suscriptores-lista">
+          <p style="color:var(--text-soft);font-size:0.88rem;">Cargando...</p>
+        </div>
+      </div>
+    </div>
+
+    </main><!-- /.admin-content -->
+  </div><!-- /.admin-layout -->
+</section>
+
+<!-- MONITOREO JURÍDICO -->
+<section class="section" id="monitoreo">
+  <div id="mon-section-header" class="page-header">
+    <h2>Monitoreo Jurídico</h2>
+    <p>Seguimiento automático de tus procesos en la Rama Judicial de Colombia</p>
+  </div>
+  <div id="monitoreo-content">
+    <div class="loading-spinner"></div>
+  </div>
+</section>
+
+</main>
+
+<!-- OVERLAY PREVISUALIZACIÓN TEMPORAL (10 segundos) -->
+<div class="preview-timed-overlay" id="preview-timed-overlay">
+  <div class="preview-timed-box">
+    <div class="preview-timed-header">
+      <h4 id="preview-timed-titulo">Vista previa del documento</h4>
+      <button class="preview-timed-close" onclick="cerrarPreviewTimed()">✕</button>
+    </div>
+    <div class="preview-timed-countdown">
+      <div class="countdown-bar-wrap">
+        <div class="countdown-bar-fill" id="countdown-bar" style="width:100%;"></div>
+      </div>
+      <span class="countdown-text" id="countdown-text">Vista por <strong>10s</strong></span>
+    </div>
+    <div style="position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="preview-watermark"></div>
+      <div class="preview-timed-content" id="preview-timed-content">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    <div class="preview-timed-footer">
+      <p>Esta es una previsualización parcial. Adquiere la minuta para obtener el documento completo y personalizado.</p>
+      <button class="btn btn-primary" id="preview-timed-adquirir">Adquirir ahora</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPRA (5 pasos) -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-compra">
+    <div class="modal-header">
+      <button class="modal-close" id="modal-close">✕</button>
+      <h3 id="modal-nombre-titulo"></h3>
+      <div class="modal-precio-tag" id="modal-precio-header"></div>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="steps-bar" id="steps-bar-container">
+        <!-- Se construye dinámicamente -->
+      </div>
+
+      <button type="button" class="live-preview-toggle-mobile" id="live-preview-toggle-mobile" onclick="toggleLivePreviewMobile()" style="display:none;">
+        <span class="lp-toggle-icon">👁</span>
+        <span class="lp-toggle-text">Ver vista previa</span>
+      </button>
+
+      <div class="modal-flex-area" id="modal-flex-area">
+
+      <aside class="live-preview-pane" id="live-preview-pane">
+        <div class="live-preview-header">
+          <span>Vista previa en vivo</span>
+          <span class="live-preview-hint">Se actualiza al escribir</span>
+        </div>
+        <div class="live-preview-content" id="live-preview-content">
+          <div class="live-preview-empty">Cargando previsualización…</div>
+        </div>
+      </aside>
+
+      <div class="step-panels-area">
+
+      <!-- PASO 1: Vista previa -->
+      <div class="step-panel active" id="step-1">
+        <p style="font-size:0.87rem;color:var(--text-muted);margin-bottom:14px;">
+          Vista previa parcial. Adquiere la minuta para obtener el documento completo y personalizado.
+        </p>
+        <div class="doc-preview-wrap" id="doc-preview-wrap">
+          <div class="doc-content" id="doc-html-content">
+            <div class="loading-spinner"></div>
+          </div>
+          <div class="doc-preview-fade">
+            <div class="doc-preview-lock">
+              <span>🔒</span>
+              Adquiere la minuta para ver y descargar el documento completo
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 2: Campos normales (con paginado) -->
+      <div class="step-panel" id="step-2">
+        <p class="campos-intro">Completa los datos de las partes. Se insertarán automáticamente en el documento.</p>
+        <div id="campos-pag-info" class="campos-pag-info"></div>
+        <div id="campos-dinamicos"></div>
+        <div id="campos-nav" class="campos-nav" style="display:none;">
+          <button class="btn btn-outline btn-sm" id="btn-campos-prev" onclick="camposPrevPage()">← Anterior</button>
+          <span class="campos-nav-info" id="campos-nav-info"></span>
+          <button class="btn btn-primary btn-sm" id="btn-campos-next" onclick="camposNextPage()">Siguiente →</button>
+        </div>
+      </div>
+
+      <!-- PASO 2.5: Cláusulas opcionales (ELECCION USUARIO) -->
+      <div class="step-panel" id="step-clausulas">
+        <div class="clausula-pregunta-intro">
+          <p>📋 Este contrato tiene cláusulas opcionales</p>
+          <p class="sub">Haz clic en cada cláusula para leer su contenido completo y decidir si la incluyes o la excluyes. Si la excluyes, se eliminará del contrato y la numeración se ajustará automáticamente.</p>
+        </div>
+        <div id="clausulas-dinamicas"></div>
+      </div>
+
+      <!-- PASO 3: Campos de IA (hechos, pretensiones, etc.) -->
+      <div class="step-panel" id="step-3">
+        <div style="background:rgba(37,99,168,0.06);border:1.5px solid rgba(37,99,168,0.2);border-radius:10px;padding:16px;margin-bottom:18px;">
+          <p style="font-size:0.9rem;color:var(--primary);font-weight:600;margin-bottom:6px;">✍️ Redacción asistida por IA</p>
+          <p style="font-size:0.84rem;color:var(--text-muted);line-height:1.5;">Escribe los siguientes textos con tus propias palabras, de forma natural. La IA se encargará de mejorar la ortografía y redacción formal antes de incluirlos en el documento. No se agrega información — solo se corrige el lenguaje.</p>
+        </div>
+        <div id="campos-ia-dinamicos"></div>
+      </div>
+
+      <!-- PASO 4: Pago con Wompi -->
+      <div class="step-panel" id="step-4">
+        <div class="pay-total">
+          <span class="pay-total-label">Total a pagar</span>
+          <span class="pay-total-amount" id="pay-total-monto">$0 COP</span>
+        </div>
+
+        <!-- Aviso visible cuando el usuario no ha iniciado sesión -->
+        <div id="pago-login-required" class="pago-login-required" style="display:none;">
+          <div class="pago-login-icon">🔒</div>
+          <h4>Inicia sesión para continuar</h4>
+          <p>Para realizar el pago y descargar tu documento necesitas tener una cuenta. <strong>Tus datos ya están guardados</strong> — al iniciar sesión vuelves a este mismo paso.</p>
+          <div class="pago-login-actions">
+            <button type="button" class="btn btn-primary" onclick="pedirInicioSesion()">Iniciar sesión</button>
+            <button type="button" class="btn btn-secondary" onclick="pedirInicioSesion()">Crear cuenta</button>
+          </div>
+        </div>
+
+        <div id="wompi-checkout-section" class="wompi-pay-section">
+          <p style="font-size:0.9rem;color:var(--text);margin-bottom:6px;font-weight:600;">Paga de forma segura con Wompi</p>
+          <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:4px;">Acepta todos los medios de pago en Colombia:</p>
+          <div class="wompi-methods-info">
+            <div class="wompi-method-tag"><span>💳</span> Tarjeta de crédito/débito</div>
+            <div class="wompi-method-tag"><span>🏦</span> PSE</div>
+            <div class="wompi-method-tag"><span>💜</span> Nequi</div>
+            <div class="wompi-method-tag"><span>🏧</span> Bancolombia</div>
+          </div>
+          <button class="btn-wompi" id="btn-pagar-wompi" onclick="iniciarPagoWompi()">
+            Pagar ahora
+          </button>
+          <p class="wompi-secure-note">Pago procesado por Wompi (Bancolombia). Tu información está protegida con encriptación SSL.</p>
+        </div>
+
+        <!-- Modo prueba: simula pago sin cobrar -->
+        <div id="modo-prueba-section" style="display:none;margin-top:16px;background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:16px;text-align:center;">
+          <p style="font-size:0.88rem;color:#856404;font-weight:700;margin-bottom:6px;">⚙️ Modo Prueba Activo</p>
+          <p style="font-size:0.82rem;color:#856404;margin-bottom:14px;">El pago real está desactivado. Usa el botón de abajo para simular una compra exitosa y probar la descarga del documento.</p>
+          <button class="btn btn-accent btn-full" onclick="simularPago()">Simular pago exitoso (prueba)</button>
+        </div>
+
+        <!-- Minuta gratuita: saltar pago -->
+        <div id="gratis-section" style="display:none;text-align:center;padding:20px 0;">
+          <div style="font-size:2.5rem;margin-bottom:10px;">🎉</div>
+          <h4 style="color:var(--success);margin-bottom:8px;">¡Esta minuta es gratuita!</h4>
+          <p style="color:var(--text-muted);font-size:0.92rem;margin-bottom:20px;">No se requiere ningún pago. Haz clic en el botón para obtener tu documento.</p>
+          <button class="btn btn-primary" onclick="obtenerGratis()" style="min-width:200px;">Obtener documento gratis</button>
+        </div>
+
+        <div id="wompi-not-configured" class="wompi-not-configured" style="display:none;">
+          <p><strong>Pasarela de pago no configurada</strong></p>
+          <p>El administrador debe configurar la llave pública de Wompi en el panel de administración para habilitar los pagos en línea.</p>
+        </div>
+
+        <div id="wompi-pending-section" class="wompi-pending-box" style="display:none;">
+          <div class="wompi-pending-icon">⏳</div>
+          <h4>Pago pendiente de confirmación</h4>
+          <p>Tu pago está siendo procesado. Una vez confirmado, podrás descargar tu minuta.</p>
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="verificarEstadoPago()">Verificar estado del pago</button>
+        </div>
+      </div>
+
+      <!-- PASO 5: Descarga -->
+      <div class="step-panel" id="step-5">
+        <div class="success-box">
+          <div class="success-icon">✅</div>
+          <h4>¡Pago exitoso! Tu documento está listo</h4>
+          <p id="descarga-msg">Tu minuta fue personalizada con los datos que ingresaste. Descárgala ahora.</p>
+          <div class="download-options">
+            <button class="btn btn-outline" id="btn-preview-postpago" onclick="abrirPreviewPostpago()">👁 Ver documento</button>
+            <button class="btn btn-primary" id="btn-download-word">⬇ Descargar Word (.docx)</button>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /.step-panels-area -->
+      </div><!-- /.modal-flex-area -->
+    </div>
+
+    <div class="modal-footer" id="modal-footer-btns">
+      <button class="btn btn-outline btn-sm" id="btn-step-back" style="display:none;" onclick="stepBack()">← Volver</button>
+      <button class="btn btn-primary" id="btn-step-next" onclick="stepNext()">Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay vista previa post-pago -->
+<div class="modal-overlay preview-postpago-overlay" id="preview-postpago-overlay">
+  <div class="modal preview-postpago-modal">
+    <div class="modal-header">
+      <h3>Tu documento con tus datos</h3>
+      <button class="modal-close" onclick="cerrarPreviewPostpago()">✕</button>
+    </div>
+    <div class="preview-postpago-aviso">
+      <span class="preview-postpago-aviso-ico">✏️</span>
+      ¿Hay algo mal? Puedes corregir tus datos sin volver a pagar.
+      <button class="btn btn-sm btn-outline" onclick="editarDatosPostpago()" style="margin-left:10px;">Corregir datos</button>
+    </div>
+    <div class="preview-postpago-content" id="preview-postpago-content">
+      <div class="loading-spinner"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="editarDatosPostpago()">✏️ Corregir datos</button>
+      <button class="btn btn-primary btn-sm" onclick="descargarDesdePreview()">⬇ Descargar Word</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay procesando -->
+<div class="processing-overlay" id="processing-overlay">
+  <div class="loading-spinner"></div>
+  <p id="processing-msg">Procesando...</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-grid">
+      <div class="site-footer-brand">
+        <div class="site-footer-logo">
+          <span class="site-footer-logo-mark">ML</span>
+          <span class="site-footer-logo-text">Minutas Legales<br><em>Colombia</em></span>
+        </div>
+        <p class="site-footer-tagline">Documentos jurídicos personalizados para ciudadanos y empresas colombianas. Redactados por expertos, listos para firmar.</p>
+        <div class="site-footer-badges">
+          <span class="site-footer-badge">Pago seguro</span>
+          <span class="site-footer-badge">Datos protegidos</span>
+          <span class="site-footer-badge">100% Colombia</span>
+        </div>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="#" onclick="showSection('inicio');return false;">Inicio</a></li>
+          <li><a href="#" onclick="showSection('minutas');return false;">Catálogo de minutas</a></li>
+          <li><a href="#" onclick="showSection('asesoria');return false;">Asesoría legal</a></li>
+          <li><a href="#" onclick="showSection('usuarios');return false;">Mi cuenta</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#" onclick="return false;">Términos y condiciones</a></li>
+          <li><a href="#" onclick="return false;">Política de privacidad</a></li>
+          <li><a href="#" onclick="return false;">Tratamiento de datos</a></li>
+          <li><a href="#" onclick="return false;">Política de reembolsos</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Contacto</h4>
+        <ul class="site-footer-contact">
+          <li><span class="sf-ico" aria-hidden="true">@</span><a href="mailto:contacto@minutaslegales.co">contacto@minutaslegales.co</a></li>
+          <li><span class="sf-ico" aria-hidden="true">W</span><a href="https://wa.me/573000000000" target="_blank" rel="noopener">WhatsApp directo</a></li>
+          <li><span class="sf-ico" aria-hidden="true">●</span>Lun a Vie · 8:00 a 18:00</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      <div class="site-footer-bottom-left">
+        &copy; <span id="footer-year"></span> <strong>Minutas Legales Colombia</strong>. Todos los derechos reservados.
+      </div>
+      <div class="site-footer-bottom-right">
+        Hecho con rigor jurídico en Colombia
+      </div>
+    </div>
+  </div>
+</footer>
+<script>document.getElementById("footer-year").textContent=new Date().getFullYear();</script>
+
+  <script src="app.js?v=20260614"></script>
+  <script src="mobile-tap-fill.js"></script>
+
+  <script src="monitoreo.js"></script>
+<script src="analizar-actuacion.js"></script>
+</body>
+</html>
