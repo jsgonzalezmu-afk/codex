@@ -623,6 +623,11 @@
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clip-rule="evenodd"/></svg>
           <span>Planes Monitoreo</span>
         </button>
+        <!-- NUEVA PESTAÑA: Configuración Google Analytics y reCAPTCHA -->
+        <button class="admin-tab-btn" onclick="cambiarTabAdmin('tab-google', this)">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-9h2v4H9V7zm0 5h2v2H9v-2z"/></svg>
+          <span>Configuración Google</span>
+        </button>
       </nav>
     </aside>
 
@@ -888,6 +893,73 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════ NUEVA PESTAÑA: Configuración Google ═══════════ -->
+    <div class="admin-tab-panel" id="tab-google">
+
+      <!-- Google Analytics 4 -->
+      <div class="admin-tab-card">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="flex-shrink:0"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm.75 4.75v5.5h-1.5v-5.5h1.5zm0 6.5v1.5h-1.5v-1.5h1.5z"/></svg>
+          Google Analytics 4
+        </h3>
+        <p class="form-hint" style="margin-bottom:18px;">
+          Ingresa el Measurement ID de tu propiedad GA4 (ej: <code>G-XXXXXXXXXX</code>). Una vez guardado, los eventos se registrarán automáticamente en cada sesión.
+        </p>
+        <form onsubmit="guardarGoogleConfigGA(event)">
+          <div class="form-group">
+            <label for="google-ga-id">Measurement ID (GA4)</label>
+            <input type="text" id="google-ga-id" class="form-control"
+              placeholder="G-XXXXXXXXXX" autocomplete="off" />
+            <p class="form-hint">
+              Encuéntralo en Google Analytics → Admin → Flujos de datos → Web → Measurement ID.
+            </p>
+          </div>
+          <p class="form-hint" style="margin-bottom:12px;font-size:0.8rem;">
+            <strong>Eventos registrados automáticamente:</strong>
+            <code>login</code>, <code>register</code>, <code>logout</code>,
+            <code>view_minuta</code>, <code>purchase_minuta</code>,
+            <code>use_ai</code>, <code>download_docx</code>.
+          </p>
+          <button type="submit" class="btn btn-primary" id="btn-guardar-google-ga">Guardar</button>
+        </form>
+        <div id="google-ga-status" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- reCAPTCHA v3 -->
+      <div class="admin-tab-card" style="margin-top:16px;">
+        <h3>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="flex-shrink:0"><path fill-rule="evenodd" d="M10 1a9 9 0 100 18A9 9 0 0010 1zm0 2a7 7 0 110 14A7 7 0 0110 3zm-1 4h2v4h-2V7zm0 5h2v2h-2v-2z" clip-rule="evenodd"/></svg>
+          Google reCAPTCHA v3 (invisible)
+        </h3>
+        <p class="form-hint" style="margin-bottom:18px;">
+          Protege los formularios de <strong>login</strong>, <strong>registro</strong> y <strong>recuperación de contraseña</strong>, así como las llamadas a la <strong>IA</strong>, con reCAPTCHA v3 invisible. La <strong>Secret Key nunca llega al navegador</strong>; se almacena cifrada en Supabase.
+        </p>
+        <form onsubmit="guardarGoogleConfigRecaptcha(event)">
+          <div class="form-group">
+            <label for="google-recaptcha-site-key">Site Key (pública)</label>
+            <input type="text" id="google-recaptcha-site-key" class="form-control"
+              placeholder="6Lc..." autocomplete="off" />
+            <p class="form-hint">Clave pública — se carga en el navegador para generar tokens.</p>
+          </div>
+          <div class="form-group">
+            <label for="google-recaptcha-secret-key">Secret Key (privada)</label>
+            <input type="password" id="google-recaptcha-secret-key" class="form-control"
+              placeholder="6Lc..." autocomplete="new-password" />
+            <p class="form-hint">
+              ⚠️ Se guarda en Supabase pero <strong>nunca</strong> se envía al navegador.
+              Para validación completa del score implementa una
+              <a href="https://supabase.com/docs/guides/functions" target="_blank" rel="noopener">Supabase Edge Function</a>
+              que llame a <code>https://www.google.com/recaptcha/api/siteverify</code>.
+            </p>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btn-guardar-google-recaptcha">Guardar</button>
+        </form>
+        <div id="google-recaptcha-status" style="margin-top:12px;"></div>
+      </div>
+
+    </div>
+    <!-- ═══════════ FIN: Configuración Google ═══════════ -->
 
     </main><!-- /.admin-content -->
   </div><!-- /.admin-layout -->
