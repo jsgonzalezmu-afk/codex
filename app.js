@@ -36,6 +36,7 @@ let modoPrueba       = false; // Modo prueba: omite pago real
 let currentWompiTransactionId = null;
 let suscripcionMonitoreo = null; // null | { plan: "basico"|"premium", created_at }
 let monitoreoConfig      = {};   // { precio_basico, precio_premium }
+let googleConfig         = {};   // { gaMeasurementId, recaptchaSiteKey }
 
 /* Indica si la minuta actual tiene campos de IA */
 let minutaTieneIA = false;
@@ -162,6 +163,7 @@ function showSection(id) {
   document.body.classList.remove("on-inicio","on-minutas","on-usuarios","on-asesoria","on-admin","on-monitoreo");
   document.body.classList.add("on-" + id);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  ga4_page_view(id);
   if (id === "minutas" && !minutasData.length) loadMinutas();
   if (id === "usuarios") {
     if (currentUser) {
@@ -181,6 +183,7 @@ function showSection(id) {
     cargarWompiConfigAdmin();
     cargarGeminiConfigAdmin();
     cargarPlanesMonitoreoAdmin();
+    cargarGoogleConfigAdmin();
     actualizarEstadoModoPrueba();
   }
   if (id === "monitoreo") {
@@ -277,11 +280,15 @@ document.getElementById("form-login").addEventListener("submit", async e => {
   const btn = document.getElementById("btn-login");
   btn.disabled = true; btn.textContent = "Iniciando sesión...";
   try {
+    /* reCAPTCHA v3: obtiene token antes de autenticar */
+    await obtenerTokenRecaptcha("login");
     const { error } = await supabaseClient.auth.signInWithPassword({
       email:    document.getElementById("login-email").value.trim(),
       password: document.getElementById("login-password").value
     });
     if (error) throw error;
+    /* GA4: evento login exitoso */
+    gtag_evento("login", { method: "email" });
     if (pendingMinutaId) {
       const savedId = pendingMinutaId;
       const state   = pendingResumeState;
@@ -303,11 +310,15 @@ document.getElementById("form-register").addEventListener("submit", async e => {
   const btn = document.getElementById("btn-register");
   btn.disabled = true; btn.textContent = "Creando cuenta...";
   try {
+    /* reCAPTCHA v3: obtiene token antes de crear la cuenta */
+    await obtenerTokenRecaptcha("register");
     const { error } = await supabaseClient.auth.signUp({
       email:    document.getElementById("reg-email").value.trim(),
       password: document.getElementById("reg-password").value
     });
     if (error) throw error;
+    /* GA4: evento registro exitoso */
+    gtag_evento("register", { method: "email" });
     if (pendingMinutaId) {
       const savedId = pendingMinutaId;
       const state   = pendingResumeState;
@@ -325,6 +336,7 @@ document.getElementById("form-register").addEventListener("submit", async e => {
 
 /* ── LOGOUT ── */
 document.getElementById("btn-logout").addEventListener("click", async () => {
+  gtag_evento("logout", {});
   await supabaseClient.auth.signOut();
   toast("Sesión cerrada.");
   showSection("inicio");
@@ -334,6 +346,7 @@ const btnLogoutMobile = document.getElementById("btn-logout-mobile");
 if (btnLogoutMobile) {
   btnLogoutMobile.addEventListener("click", async () => {
     cerrarMenuMovil();
+    gtag_evento("logout", {});
     await supabaseClient.auth.signOut();
     toast("Sesión cerrada.");
     showSection("inicio");
@@ -739,6 +752,12 @@ function getPaginationRange(current, total) {
 async function abrirMinuta(id) {
   currentMinuta    = minutasData.find(m => m.id === id);
   if (!currentMinuta) return;
+  /* GA4: evento view_minuta al abrir el modal de una minuta */
+  gtag_evento("view_minuta", {
+    minuta_id:       id,
+    minuta_nombre:   currentMinuta.nombre   || "",
+    minuta_categoria: currentMinuta.categoria || ""
+  });
   currentStep      = 1;
   camposLlenados   = {};
   camposIALlenados = {};
@@ -1566,6 +1585,12 @@ async function mejorarTextosConIA() {
       camposIAMejorados[t.clave] = (parsed && parsed[key]) ? String(parsed[key]).trim() : t.texto;
     });
     mostrarPreviewIA();
+    /* GA4: evento use_ai tras procesar con éxito */
+    gtag_evento("use_ai", {
+      minuta_id:     currentMinuta ? currentMinuta.id     : "",
+      minuta_nombre: currentMinuta ? currentMinuta.nombre : "",
+      campos_count:  textos.length
+    });
     await iaLimitIncrement();
   } catch(e) {
     const detalle = e instanceof Error ? e.message : String(e);
@@ -1865,6 +1890,211 @@ function desactivarModoPrueba() {
   toast("Modo prueba desactivado. Los pagos son reales.");
 }
 
+/* ═══════════════════════════════════════════════════════
+   GOOGLE ANALYTICS 4 Y reCAPTCHA v3
+   La configuración se almacena en Supabase (tabla config, id="google").
+   El frontend solo carga ga_measurement_id y recaptcha_site_key.
+   La recaptcha_secret_key NUNCA llega al navegador; se guarda en
+   Supabase exclusivamente para uso futuro desde un servidor/Edge Function.
+   ═══════════════════════════════════════════════════════ */
+
+/* Carga la config de Google desde Supabase e inicializa GA4/reCAPTCHA */
+async function cargarGoogleConfig() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("config")
+      .select("ga_measurement_id, recaptcha_site_key")
+      .eq("id", "google")
+      .maybeSingle();
+    if (error || !data) return;
+    googleConfig = {
+      gaMeasurementId:  data.ga_measurement_id  || "",
+      recaptchaSiteKey: data.recaptcha_site_key  || ""
+    };
+    if (googleConfig.gaMeasurementId)  inicializarGA4(googleConfig.gaMeasurementId);
+    if (googleConfig.recaptchaSiteKey) inicializarRecaptcha(googleConfig.recaptchaSiteKey);
+  } catch (_) {}
+}
+
+/* ── Google Analytics 4 ──────────────────────────────── */
+
+/**
+ * Inyecta el script de GA4 dinámicamente una sola vez.
+ * @param {string} measurementId  Ej: G-XXXXXXXXXX
+ */
+function inicializarGA4(measurementId) {
+  if (!measurementId || document.getElementById("ga4-script")) return;
+  const s = document.createElement("script");
+  s.id    = "ga4-script";
+  s.async = true;
+  s.src   = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function() { window.dataLayer.push(arguments); };
+  window.gtag("js", new Date());
+  window.gtag("config", measurementId, { send_page_view: true });
+}
+
+/**
+ * Envía un evento personalizado a GA4. Falla silenciosamente si GA4
+ * no está cargado o la config no está activa.
+ * @param {string} nombre   Nombre del evento GA4
+ * @param {Object} params   Parámetros adicionales del evento
+ */
+function gtag_evento(nombre, params) {
+  try {
+    if (typeof window.gtag !== "function") return;
+    window.gtag("event", nombre, params || {});
+  } catch (_) {}
+}
+
+/**
+ * Registra un page_view en GA4 al navegar entre secciones.
+ * @param {string} seccion  ID de la sección (inicio, minutas, etc.)
+ */
+function ga4_page_view(seccion) {
+  try {
+    if (typeof window.gtag !== "function") return;
+    window.gtag("event", "page_view", {
+      page_title:    document.title + " — " + seccion,
+      page_location: window.location.href.split("#")[0] + "#" + seccion
+    });
+  } catch (_) {}
+}
+
+/* ── Google reCAPTCHA v3 ────────────────────────────── */
+
+/**
+ * Inyecta el script de reCAPTCHA v3 dinámicamente una sola vez.
+ * @param {string} siteKey  Site Key de reCAPTCHA v3
+ */
+function inicializarRecaptcha(siteKey) {
+  if (!siteKey || document.getElementById("recaptcha-script")) return;
+  const s  = document.createElement("script");
+  s.id     = "recaptcha-script";
+  s.async  = true;
+  s.defer  = true;
+  s.src    = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+  document.head.appendChild(s);
+}
+
+/**
+ * Obtiene un token de reCAPTCHA v3 para una acción protegida.
+ * Devuelve null si reCAPTCHA no está disponible (no bloquea la acción).
+ * La validación del score requiere una Edge Function con la Secret Key.
+ * @param {string} accion  Nombre de la acción (ej: "login", "register")
+ * @returns {Promise<string|null>}
+ */
+async function obtenerTokenRecaptcha(accion) {
+  try {
+    if (typeof window.grecaptcha === "undefined" || !googleConfig.recaptchaSiteKey) return null;
+    await new Promise(resolve => window.grecaptcha.ready(resolve));
+    return await window.grecaptcha.execute(googleConfig.recaptchaSiteKey, { action: accion });
+  } catch (_) { return null; }
+}
+
+/* ── Panel Admin: Configuración Google ─────────────── */
+
+/** Carga los valores guardados en el formulario del panel Admin. */
+async function cargarGoogleConfigAdmin() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("config")
+      .select("ga_measurement_id, recaptcha_site_key, recaptcha_secret_key")
+      .eq("id", "google")
+      .maybeSingle();
+    if (error || !data) return;
+    const gaInput  = document.getElementById("google-ga-id");
+    const skInput  = document.getElementById("google-recaptcha-site-key");
+    const secInput = document.getElementById("google-recaptcha-secret-key");
+    if (gaInput  && data.ga_measurement_id)     gaInput.value  = data.ga_measurement_id;
+    if (skInput  && data.recaptcha_site_key)    skInput.value  = data.recaptcha_site_key;
+    if (secInput && data.recaptcha_secret_key)  secInput.value = data.recaptcha_secret_key;
+    const gaStatus = document.getElementById("google-ga-status");
+    if (gaStatus && data.ga_measurement_id) {
+      gaStatus.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ Google Analytics configurado (${esc(data.ga_measurement_id)}).</p>`;
+    }
+    const rcStatus = document.getElementById("google-recaptcha-status");
+    if (rcStatus && data.recaptcha_site_key) {
+      rcStatus.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ reCAPTCHA v3 configurado.</p>`;
+    }
+  } catch (_) {}
+}
+
+/**
+ * Guarda o actualiza un campo en la fila config id="google" de Supabase.
+ * Usa select→insert/update para no depender de restricciones UNIQUE en la columna id.
+ * @param {Object} campos  Columnas a guardar/actualizar
+ */
+async function _guardarGoogleConfigRow(campos) {
+  const { data: existing } = await supabaseClient
+    .from("config").select("id").eq("id", "google").maybeSingle();
+  if (existing) {
+    const { error } = await supabaseClient
+      .from("config")
+      .update({ ...campos, updated_at: new Date().toISOString() })
+      .eq("id", "google");
+    if (error) throw error;
+  } else {
+    const { error } = await supabaseClient
+      .from("config")
+      .insert({ id: "google", ...campos, updated_at: new Date().toISOString() });
+    if (error) throw error;
+  }
+}
+
+/** Guarda la Measurement ID de Google Analytics 4 en Supabase. */
+async function guardarGoogleConfigGA(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btn-guardar-google-ga");
+  btn.disabled = true; btn.textContent = "Guardando...";
+  const gaId = document.getElementById("google-ga-id").value.trim();
+  if (!gaId) {
+    toast("Escribe el Measurement ID de Google Analytics.", "error");
+    btn.disabled = false; btn.textContent = "Guardar"; return;
+  }
+  if (!/^G-[A-Z0-9]+$/i.test(gaId)) {
+    toast("El Measurement ID debe tener el formato G-XXXXXXXXXX.", "error");
+    btn.disabled = false; btn.textContent = "Guardar"; return;
+  }
+  try {
+    await _guardarGoogleConfigRow({ ga_measurement_id: gaId });
+    googleConfig.gaMeasurementId = gaId;
+    inicializarGA4(gaId);
+    toast("Measurement ID guardado. Analytics activo.", "ok");
+    const st = document.getElementById("google-ga-status");
+    if (st) st.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ Google Analytics configurado (${esc(gaId)}).</p>`;
+  } catch (err) { toast("Error al guardar: " + err.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Guardar"; }
+}
+
+/**
+ * Guarda la Site Key y la Secret Key de reCAPTCHA v3 en Supabase.
+ * IMPORTANTE: La Secret Key se almacena en Supabase pero el frontend
+ * NUNCA la carga ni la expone. Úsala desde una Supabase Edge Function
+ * para validar tokens en el servidor (https://www.google.com/recaptcha/api/siteverify).
+ */
+async function guardarGoogleConfigRecaptcha(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btn-guardar-google-recaptcha");
+  btn.disabled = true; btn.textContent = "Guardando...";
+  const siteKey   = document.getElementById("google-recaptcha-site-key").value.trim();
+  const secretKey = document.getElementById("google-recaptcha-secret-key").value.trim();
+  if (!siteKey) {
+    toast("Escribe la Site Key de reCAPTCHA.", "error");
+    btn.disabled = false; btn.textContent = "Guardar"; return;
+  }
+  try {
+    await _guardarGoogleConfigRow({ recaptcha_site_key: siteKey, recaptcha_secret_key: secretKey });
+    googleConfig.recaptchaSiteKey = siteKey;
+    inicializarRecaptcha(siteKey);
+    toast("Configuración de reCAPTCHA guardada.", "ok");
+    const st = document.getElementById("google-recaptcha-status");
+    if (st) st.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ reCAPTCHA v3 configurado.</p>`;
+  } catch (err) { toast("Error al guardar: " + err.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Guardar"; }
+}
+
 /* ─────────────────────────────────────────────────────
    ADMIN TABS
 ───────────────────────────────────────────────────── */
@@ -1878,6 +2108,7 @@ function cambiarTabAdmin(tabId, btn) {
     renderAdminData();
   }
   if (tabId === "tab-historial") renderAdminData();
+  if (tabId === "tab-google") cargarGoogleConfigAdmin();
 }
 
 /* ─────────────────────────────────────────────────────
@@ -2138,6 +2369,15 @@ async function registrarVenta(reference, transactionId, metodoPago) {
       created_at:    new Date().toISOString()
     });
     if (error) throw error;
+    /* GA4: evento purchase_minuta tras venta registrada con éxito */
+    gtag_evento("purchase_minuta", {
+      transaction_id: reference,
+      minuta_id:      currentMinuta.id,
+      minuta_nombre:  currentMinuta.nombre || "",
+      value:          currentMinuta.precio || 0,
+      currency:       "COP",
+      payment_method: metodoPago
+    });
   } catch(e) { console.warn("[registrarVenta]", e); }
 }
 
@@ -2414,6 +2654,11 @@ function setupDescarga() {
       const a   = document.createElement("a");
       a.href = url; a.download = nombreArchivo + ".docx"; a.click();
       URL.revokeObjectURL(url);
+      /* GA4: evento download_docx tras descargar el documento generado */
+      gtag_evento("download_docx", {
+        minuta_id:     currentMinuta ? currentMinuta.id     : "",
+        minuta_nombre: currentMinuta ? currentMinuta.nombre : ""
+      });
       return;
     }
     if (currentMinuta.archivoURL) {
@@ -2540,6 +2785,8 @@ document.getElementById("form-recuperar").addEventListener("submit", async e => 
   const email = document.getElementById("recuperar-email").value.trim();
   btn.disabled = true; btn.textContent = "Enviando...";
   try {
+    /* reCAPTCHA v3: protege la recuperación de contraseña */
+    await obtenerTokenRecaptcha("password_reset");
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     });
@@ -3973,6 +4220,7 @@ loadCategorias();
 cargarWompiConfig();
 cargarGeminiConfig();
 cargarMonitoreoConfig();
+cargarGoogleConfig();   /* GA4 + reCAPTCHA: carga config de Supabase e inyecta scripts */
 showSection("inicio");
 precargarHeroStatusPill();
 
