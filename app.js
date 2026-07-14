@@ -2036,9 +2036,10 @@ async function _guardarGoogleConfigRow(campos) {
       .eq("id", "google");
     if (error) throw error;
   } else {
+    /* api_key es NOT NULL en la tabla config — se pasa vacío para la fila de Google */
     const { error } = await supabaseClient
       .from("config")
-      .insert({ id: "google", ...campos, updated_at: new Date().toISOString() });
+      .insert({ id: "google", api_key: "", ...campos, updated_at: new Date().toISOString() });
     if (error) throw error;
   }
 }
