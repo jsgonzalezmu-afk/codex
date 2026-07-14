@@ -185,6 +185,7 @@ function showSection(id) {
     cargarPlanesMonitoreoAdmin();
     cargarGoogleConfigAdmin();
     actualizarEstadoModoPrueba();
+    registrarAccesoAdmin(); /* ② Log de acceso admin */
   }
   if (id === "monitoreo") {
     iniciarMonitoreoSection();
@@ -280,15 +281,13 @@ document.getElementById("form-login").addEventListener("submit", async e => {
   const btn = document.getElementById("btn-login");
   btn.disabled = true; btn.textContent = "Iniciando sesión...";
   try {
-    /* reCAPTCHA v3: obtiene token antes de autenticar */
-    await obtenerTokenRecaptcha("login");
+    await obtenerTokenRecaptcha("login"); /* reCAPTCHA v3 */
     const { error } = await supabaseClient.auth.signInWithPassword({
       email:    document.getElementById("login-email").value.trim(),
       password: document.getElementById("login-password").value
     });
     if (error) throw error;
-    /* GA4: evento login exitoso */
-    gtag_evento("login", { method: "email" });
+    gtag_evento("login", { method: "email" }); /* GA4 */
     if (pendingMinutaId) {
       const savedId = pendingMinutaId;
       const state   = pendingResumeState;
@@ -310,15 +309,13 @@ document.getElementById("form-register").addEventListener("submit", async e => {
   const btn = document.getElementById("btn-register");
   btn.disabled = true; btn.textContent = "Creando cuenta...";
   try {
-    /* reCAPTCHA v3: obtiene token antes de crear la cuenta */
-    await obtenerTokenRecaptcha("register");
+    await obtenerTokenRecaptcha("register"); /* reCAPTCHA v3 */
     const { error } = await supabaseClient.auth.signUp({
       email:    document.getElementById("reg-email").value.trim(),
       password: document.getElementById("reg-password").value
     });
     if (error) throw error;
-    /* GA4: evento registro exitoso */
-    gtag_evento("register", { method: "email" });
+    gtag_evento("register", { method: "email" }); /* GA4 */
     if (pendingMinutaId) {
       const savedId = pendingMinutaId;
       const state   = pendingResumeState;
@@ -336,7 +333,7 @@ document.getElementById("form-register").addEventListener("submit", async e => {
 
 /* ── LOGOUT ── */
 document.getElementById("btn-logout").addEventListener("click", async () => {
-  gtag_evento("logout", {});
+  gtag_evento("logout", {}); /* GA4 */
   await supabaseClient.auth.signOut();
   toast("Sesión cerrada.");
   showSection("inicio");
@@ -346,7 +343,7 @@ const btnLogoutMobile = document.getElementById("btn-logout-mobile");
 if (btnLogoutMobile) {
   btnLogoutMobile.addEventListener("click", async () => {
     cerrarMenuMovil();
-    gtag_evento("logout", {});
+    gtag_evento("logout", {}); /* GA4 */
     await supabaseClient.auth.signOut();
     toast("Sesión cerrada.");
     showSection("inicio");
@@ -752,12 +749,7 @@ function getPaginationRange(current, total) {
 async function abrirMinuta(id) {
   currentMinuta    = minutasData.find(m => m.id === id);
   if (!currentMinuta) return;
-  /* GA4: evento view_minuta al abrir el modal de una minuta */
-  gtag_evento("view_minuta", {
-    minuta_id:       id,
-    minuta_nombre:   currentMinuta.nombre   || "",
-    minuta_categoria: currentMinuta.categoria || ""
-  });
+  gtag_evento("view_minuta", { minuta_id: id, minuta_nombre: currentMinuta.nombre || "", minuta_categoria: currentMinuta.categoria || "" }); /* GA4 */
   currentStep      = 1;
   camposLlenados   = {};
   camposIALlenados = {};
@@ -1504,6 +1496,14 @@ async function mejorarTextosConIA() {
     textos.forEach(t => { camposIAMejorados[t.clave] = t.texto; });
     return;
   }
+  /* ③ Límite diario global de IA por usuario */
+  await obtenerTokenRecaptcha("use_ai"); /* reCAPTCHA v3 */
+  const limiteGlobal = await iaGlobalLimitCheck();
+  if (limiteGlobal.bloqueado) {
+    toast(`Alcanzaste el límite de ${IA_GLOBAL_MAX_DIA} usos de IA por día. Vuelve mañana.`, "error");
+    textos.forEach(t => { camposIAMejorados[t.clave] = t.texto; });
+    return;
+  }
   const overlay = document.getElementById("processing-overlay");
   const msg     = document.getElementById("processing-msg");
   overlay.classList.add("open");
@@ -1585,13 +1585,9 @@ async function mejorarTextosConIA() {
       camposIAMejorados[t.clave] = (parsed && parsed[key]) ? String(parsed[key]).trim() : t.texto;
     });
     mostrarPreviewIA();
-    /* GA4: evento use_ai tras procesar con éxito */
-    gtag_evento("use_ai", {
-      minuta_id:     currentMinuta ? currentMinuta.id     : "",
-      minuta_nombre: currentMinuta ? currentMinuta.nombre : "",
-      campos_count:  textos.length
-    });
+    gtag_evento("use_ai", { minuta_id: currentMinuta ? currentMinuta.id : "", minuta_nombre: currentMinuta ? currentMinuta.nombre : "", campos_count: textos.length }); /* GA4 */
     await iaLimitIncrement();
+    await iaGlobalLimitIncrement(); /* ③ incrementa contador diario global */
   } catch(e) {
     const detalle = e instanceof Error ? e.message : String(e);
     let msgError = "La IA no pudo procesar el texto. Se usará el texto original.";
@@ -1797,9 +1793,9 @@ async function cargarWompiConfig() {
       .eq("id", "wompi")
       .single();
     if (!error && data) wompiConfig = {
-      publicKey:       data.public_key,
-      integritySecret: data.integrity_secret,
-      mode:            data.mode
+      publicKey: data.public_key,
+      mode:      data.mode
+      /* ④ integrity_secret NO se carga al navegador — solo la usa la Edge Function */
     };
   } catch(_) {}
 }
@@ -1891,21 +1887,17 @@ function desactivarModoPrueba() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   GOOGLE ANALYTICS 4 Y reCAPTCHA v3
-   La configuración se almacena en Supabase (tabla config, id="google").
-   El frontend solo carga ga_measurement_id y recaptcha_site_key.
-   La recaptcha_secret_key NUNCA llega al navegador; se guarda en
-   Supabase exclusivamente para uso futuro desde un servidor/Edge Function.
+   ① GOOGLE ANALYTICS 4 Y reCAPTCHA v3
+   Config en Supabase (tabla config, id="google").
+   El navegador solo recibe ga_measurement_id y recaptcha_site_key.
+   La recaptcha_secret_key queda en Supabase para la Edge Function.
    ═══════════════════════════════════════════════════════ */
 
-/* Carga la config de Google desde Supabase e inicializa GA4/reCAPTCHA */
 async function cargarGoogleConfig() {
   try {
     const { data, error } = await supabaseClient
-      .from("config")
-      .select("ga_measurement_id, recaptcha_site_key")
-      .eq("id", "google")
-      .maybeSingle();
+      .from("config").select("ga_measurement_id, recaptcha_site_key")
+      .eq("id", "google").maybeSingle();
     if (error || !data) return;
     googleConfig = {
       gaMeasurementId:  data.ga_measurement_id  || "",
@@ -1916,18 +1908,11 @@ async function cargarGoogleConfig() {
   } catch (_) {}
 }
 
-/* ── Google Analytics 4 ──────────────────────────────── */
-
-/**
- * Inyecta el script de GA4 dinámicamente una sola vez.
- * @param {string} measurementId  Ej: G-XXXXXXXXXX
- */
 function inicializarGA4(measurementId) {
   if (!measurementId || document.getElementById("ga4-script")) return;
   const s = document.createElement("script");
-  s.id    = "ga4-script";
-  s.async = true;
-  s.src   = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  s.id = "ga4-script"; s.async = true;
+  s.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
   document.head.appendChild(s);
   window.dataLayer = window.dataLayer || [];
   window.gtag = function() { window.dataLayer.push(arguments); };
@@ -1935,23 +1920,10 @@ function inicializarGA4(measurementId) {
   window.gtag("config", measurementId, { send_page_view: true });
 }
 
-/**
- * Envía un evento personalizado a GA4. Falla silenciosamente si GA4
- * no está cargado o la config no está activa.
- * @param {string} nombre   Nombre del evento GA4
- * @param {Object} params   Parámetros adicionales del evento
- */
 function gtag_evento(nombre, params) {
-  try {
-    if (typeof window.gtag !== "function") return;
-    window.gtag("event", nombre, params || {});
-  } catch (_) {}
+  try { if (typeof window.gtag === "function") window.gtag("event", nombre, params || {}); } catch (_) {}
 }
 
-/**
- * Registra un page_view en GA4 al navegar entre secciones.
- * @param {string} seccion  ID de la sección (inicio, minutas, etc.)
- */
 function ga4_page_view(seccion) {
   try {
     if (typeof window.gtag !== "function") return;
@@ -1962,29 +1934,14 @@ function ga4_page_view(seccion) {
   } catch (_) {}
 }
 
-/* ── Google reCAPTCHA v3 ────────────────────────────── */
-
-/**
- * Inyecta el script de reCAPTCHA v3 dinámicamente una sola vez.
- * @param {string} siteKey  Site Key de reCAPTCHA v3
- */
 function inicializarRecaptcha(siteKey) {
   if (!siteKey || document.getElementById("recaptcha-script")) return;
-  const s  = document.createElement("script");
-  s.id     = "recaptcha-script";
-  s.async  = true;
-  s.defer  = true;
-  s.src    = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+  const s = document.createElement("script");
+  s.id = "recaptcha-script"; s.async = true; s.defer = true;
+  s.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
   document.head.appendChild(s);
 }
 
-/**
- * Obtiene un token de reCAPTCHA v3 para una acción protegida.
- * Devuelve null si reCAPTCHA no está disponible (no bloquea la acción).
- * La validación del score requiere una Edge Function con la Secret Key.
- * @param {string} accion  Nombre de la acción (ej: "login", "register")
- * @returns {Promise<string|null>}
- */
 async function obtenerTokenRecaptcha(accion) {
   try {
     if (typeof window.grecaptcha === "undefined" || !googleConfig.recaptchaSiteKey) return null;
@@ -1993,75 +1950,50 @@ async function obtenerTokenRecaptcha(accion) {
   } catch (_) { return null; }
 }
 
-/* ── Panel Admin: Configuración Google ─────────────── */
-
-/** Carga los valores guardados en el formulario del panel Admin. */
 async function cargarGoogleConfigAdmin() {
   try {
     const { data, error } = await supabaseClient
-      .from("config")
-      .select("ga_measurement_id, recaptcha_site_key, recaptcha_secret_key")
-      .eq("id", "google")
-      .maybeSingle();
+      .from("config").select("ga_measurement_id, recaptcha_site_key, recaptcha_secret_key")
+      .eq("id", "google").maybeSingle();
     if (error || !data) return;
     const gaInput  = document.getElementById("google-ga-id");
     const skInput  = document.getElementById("google-recaptcha-site-key");
     const secInput = document.getElementById("google-recaptcha-secret-key");
-    if (gaInput  && data.ga_measurement_id)     gaInput.value  = data.ga_measurement_id;
-    if (skInput  && data.recaptcha_site_key)    skInput.value  = data.recaptcha_site_key;
-    if (secInput && data.recaptcha_secret_key)  secInput.value = data.recaptcha_secret_key;
+    if (gaInput  && data.ga_measurement_id)    gaInput.value  = data.ga_measurement_id;
+    if (skInput  && data.recaptcha_site_key)   skInput.value  = data.recaptcha_site_key;
+    if (secInput && data.recaptcha_secret_key) secInput.value = data.recaptcha_secret_key;
     const gaStatus = document.getElementById("google-ga-status");
-    if (gaStatus && data.ga_measurement_id) {
+    if (gaStatus && data.ga_measurement_id)
       gaStatus.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ Google Analytics configurado (${esc(data.ga_measurement_id)}).</p>`;
-    }
     const rcStatus = document.getElementById("google-recaptcha-status");
-    if (rcStatus && data.recaptcha_site_key) {
+    if (rcStatus && data.recaptcha_site_key)
       rcStatus.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ reCAPTCHA v3 configurado.</p>`;
-    }
   } catch (_) {}
 }
 
-/**
- * Guarda o actualiza un campo en la fila config id="google" de Supabase.
- * Usa select→insert/update para no depender de restricciones UNIQUE en la columna id.
- * @param {Object} campos  Columnas a guardar/actualizar
- */
 async function _guardarGoogleConfigRow(campos) {
-  const { data: existing } = await supabaseClient
-    .from("config").select("id").eq("id", "google").maybeSingle();
-  if (existing) {
-    const { error } = await supabaseClient
-      .from("config")
-      .update({ ...campos, updated_at: new Date().toISOString() })
-      .eq("id", "google");
+  const { data: ex } = await supabaseClient.from("config").select("id").eq("id", "google").maybeSingle();
+  if (ex) {
+    const { error } = await supabaseClient.from("config")
+      .update({ ...campos, updated_at: new Date().toISOString() }).eq("id", "google");
     if (error) throw error;
   } else {
-    /* api_key es NOT NULL en la tabla config — se pasa vacío para la fila de Google */
-    const { error } = await supabaseClient
-      .from("config")
+    const { error } = await supabaseClient.from("config")
       .insert({ id: "google", api_key: "", ...campos, updated_at: new Date().toISOString() });
     if (error) throw error;
   }
 }
 
-/** Guarda la Measurement ID de Google Analytics 4 en Supabase. */
 async function guardarGoogleConfigGA(e) {
   e.preventDefault();
   const btn = document.getElementById("btn-guardar-google-ga");
   btn.disabled = true; btn.textContent = "Guardando...";
   const gaId = document.getElementById("google-ga-id").value.trim();
-  if (!gaId) {
-    toast("Escribe el Measurement ID de Google Analytics.", "error");
-    btn.disabled = false; btn.textContent = "Guardar"; return;
-  }
-  if (!/^G-[A-Z0-9]+$/i.test(gaId)) {
-    toast("El Measurement ID debe tener el formato G-XXXXXXXXXX.", "error");
-    btn.disabled = false; btn.textContent = "Guardar"; return;
-  }
+  if (!gaId) { toast("Escribe el Measurement ID de Google Analytics.", "error"); btn.disabled = false; btn.textContent = "Guardar"; return; }
+  if (!/^G-[A-Z0-9]+$/i.test(gaId)) { toast("El Measurement ID debe tener el formato G-XXXXXXXXXX.", "error"); btn.disabled = false; btn.textContent = "Guardar"; return; }
   try {
     await _guardarGoogleConfigRow({ ga_measurement_id: gaId });
-    googleConfig.gaMeasurementId = gaId;
-    inicializarGA4(gaId);
+    googleConfig.gaMeasurementId = gaId; inicializarGA4(gaId);
     toast("Measurement ID guardado. Analytics activo.", "ok");
     const st = document.getElementById("google-ga-status");
     if (st) st.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ Google Analytics configurado (${esc(gaId)}).</p>`;
@@ -2069,31 +2001,95 @@ async function guardarGoogleConfigGA(e) {
   finally { btn.disabled = false; btn.textContent = "Guardar"; }
 }
 
-/**
- * Guarda la Site Key y la Secret Key de reCAPTCHA v3 en Supabase.
- * IMPORTANTE: La Secret Key se almacena en Supabase pero el frontend
- * NUNCA la carga ni la expone. Úsala desde una Supabase Edge Function
- * para validar tokens en el servidor (https://www.google.com/recaptcha/api/siteverify).
- */
 async function guardarGoogleConfigRecaptcha(e) {
   e.preventDefault();
   const btn = document.getElementById("btn-guardar-google-recaptcha");
   btn.disabled = true; btn.textContent = "Guardando...";
   const siteKey   = document.getElementById("google-recaptcha-site-key").value.trim();
   const secretKey = document.getElementById("google-recaptcha-secret-key").value.trim();
-  if (!siteKey) {
-    toast("Escribe la Site Key de reCAPTCHA.", "error");
-    btn.disabled = false; btn.textContent = "Guardar"; return;
-  }
+  if (!siteKey) { toast("Escribe la Site Key de reCAPTCHA.", "error"); btn.disabled = false; btn.textContent = "Guardar"; return; }
   try {
     await _guardarGoogleConfigRow({ recaptcha_site_key: siteKey, recaptcha_secret_key: secretKey });
-    googleConfig.recaptchaSiteKey = siteKey;
-    inicializarRecaptcha(siteKey);
+    googleConfig.recaptchaSiteKey = siteKey; inicializarRecaptcha(siteKey);
     toast("Configuración de reCAPTCHA guardada.", "ok");
     const st = document.getElementById("google-recaptcha-status");
     if (st) st.innerHTML = `<p style="color:var(--success);font-size:0.85rem;font-weight:600;">✅ reCAPTCHA v3 configurado.</p>`;
   } catch (err) { toast("Error al guardar: " + err.message, "error"); }
   finally { btn.disabled = false; btn.textContent = "Guardar"; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ② SEGURIDAD: LOG DE ACCESOS ADMIN
+   Tabla: admin_logs (ejecutar admin_logs.sql en Supabase)
+   Los logs son visibles en Supabase → Table Editor → admin_logs
+   ═══════════════════════════════════════════════════════ */
+
+async function registrarAccesoAdmin() {
+  if (!currentUser || !isAdmin) return;
+  try {
+    await supabaseClient.from("admin_logs").insert({
+      user_id:    currentUser.id,
+      user_email: currentUser.email,
+      accion:     "acceso_panel_admin",
+      created_at: new Date().toISOString()
+    });
+  } catch (_) {} /* silencioso — no interrumpe la navegación */
+}
+
+/* ═══════════════════════════════════════════════════════
+   ③ SEGURIDAD: RATE LIMITING IA — LÍMITE DIARIO GLOBAL
+   Agrega un tope de usos de IA POR DÍA por usuario
+   (independiente del límite por minuta).
+   Clave en app_limites: ia_global_USERID_YYYY-MM-DD
+   ═══════════════════════════════════════════════════════ */
+
+const IA_GLOBAL_MAX_DIA = 10; /* Máx. usos de IA por usuario por día */
+
+function _iaGlobalClave() {
+  if (!currentUser) return null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  return `ia_global_${currentUser.id}_${hoy}`;
+}
+
+async function iaGlobalLimitCheck() {
+  const clave = _iaGlobalClave();
+  if (!clave) return { bloqueado: false, usos: 0 };
+  const data = await _limLeer(clave);
+  if (!data) return { bloqueado: false, usos: 0 };
+  const bh = data.bloqueado_hasta ? new Date(data.bloqueado_hasta).getTime() : 0;
+  if (bh > Date.now()) return { bloqueado: true, usos: data.usos || 0 };
+  return { bloqueado: (data.usos || 0) >= IA_GLOBAL_MAX_DIA, usos: data.usos || 0 };
+}
+
+async function iaGlobalLimitIncrement() {
+  const clave = _iaGlobalClave();
+  if (!clave) return false;
+  const data  = await _limLeer(clave);
+  const usos  = ((data?.usos) || 0) + 1;
+  const mañana = new Date(); mañana.setHours(24, 0, 0, 0);
+  const bh = usos >= IA_GLOBAL_MAX_DIA ? mañana.toISOString() : null;
+  await _limEscribir(clave, usos, bh);
+  return usos >= IA_GLOBAL_MAX_DIA;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ④ SEGURIDAD: FIRMA WOMPI VÍA EDGE FUNCTION
+   La integrity_secret NO llega al navegador.
+   Se calcula en Supabase Edge Function "wompi-signature".
+   Archivo: supabase/functions/wompi-signature/index.ts
+   ═══════════════════════════════════════════════════════ */
+
+async function obtenerFirmaWompi(reference, amountInCents, currency) {
+  try {
+    const { data, error } = await supabaseClient.functions.invoke("wompi-signature", {
+      body: { reference, amountInCents, currency }
+    });
+    if (error) throw error;
+    return data?.signature || null;
+  } catch (_) {
+    /* Edge Function no desplegada → continuar sin firma (Wompi lo permite) */
+    return null;
+  }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -2309,12 +2305,9 @@ async function iniciarPagoWompi() {
       publicKey: wompiConfig.publicKey,
       customerData: { email: currentUser.email }
     };
-    if (wompiConfig.integritySecret) {
-      try {
-        const signature = await calcularIntegritySignature(reference, amountInCents, currency, wompiConfig.integritySecret);
-        checkoutConfig.signature = { integrity: signature };
-      } catch(e) {}
-    }
+    /* ④ Firma calculada en el servidor (Edge Function) — secret nunca en el browser */
+    const firma = await obtenerFirmaWompi(reference, amountInCents, currency);
+    if (firma) checkoutConfig.signature = { integrity: firma };
     const checkout = new WidgetCheckout(checkoutConfig);
     btn.disabled = false; btn.textContent = "Pagar ahora";
     checkout.open(async result => {
@@ -2370,15 +2363,7 @@ async function registrarVenta(reference, transactionId, metodoPago) {
       created_at:    new Date().toISOString()
     });
     if (error) throw error;
-    /* GA4: evento purchase_minuta tras venta registrada con éxito */
-    gtag_evento("purchase_minuta", {
-      transaction_id: reference,
-      minuta_id:      currentMinuta.id,
-      minuta_nombre:  currentMinuta.nombre || "",
-      value:          currentMinuta.precio || 0,
-      currency:       "COP",
-      payment_method: metodoPago
-    });
+    gtag_evento("purchase_minuta", { transaction_id: reference, minuta_id: currentMinuta.id, minuta_nombre: currentMinuta.nombre || "", value: currentMinuta.precio || 0, currency: "COP", payment_method: metodoPago }); /* GA4 */
   } catch(e) { console.warn("[registrarVenta]", e); }
 }
 
@@ -2655,11 +2640,7 @@ function setupDescarga() {
       const a   = document.createElement("a");
       a.href = url; a.download = nombreArchivo + ".docx"; a.click();
       URL.revokeObjectURL(url);
-      /* GA4: evento download_docx tras descargar el documento generado */
-      gtag_evento("download_docx", {
-        minuta_id:     currentMinuta ? currentMinuta.id     : "",
-        minuta_nombre: currentMinuta ? currentMinuta.nombre : ""
-      });
+      gtag_evento("download_docx", { minuta_id: currentMinuta ? currentMinuta.id : "", minuta_nombre: currentMinuta ? currentMinuta.nombre : "", file_format: "docx" }); /* GA4 */
       return;
     }
     if (currentMinuta.archivoURL) {
@@ -2786,8 +2767,7 @@ document.getElementById("form-recuperar").addEventListener("submit", async e => 
   const email = document.getElementById("recuperar-email").value.trim();
   btn.disabled = true; btn.textContent = "Enviando...";
   try {
-    /* reCAPTCHA v3: protege la recuperación de contraseña */
-    await obtenerTokenRecaptcha("password_reset");
+    await obtenerTokenRecaptcha("password_reset"); /* reCAPTCHA v3 */
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     });
@@ -4221,7 +4201,7 @@ loadCategorias();
 cargarWompiConfig();
 cargarGeminiConfig();
 cargarMonitoreoConfig();
-cargarGoogleConfig();   /* GA4 + reCAPTCHA: carga config de Supabase e inyecta scripts */
+cargarGoogleConfig(); /* ① GA4 + reCAPTCHA — carga config de Supabase e inyecta scripts */
 showSection("inicio");
 precargarHeroStatusPill();
 
