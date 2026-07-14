@@ -12,19 +12,27 @@
                 https://checkout.wompi.co
                 https://www.googletagmanager.com
                 https://www.google.com
-                https://www.gstatic.com;
+                https://www.gstatic.com
+                https://recaptcha.google.com;
     style-src   'self' 'unsafe-inline';
     connect-src 'self'
                 https://*.supabase.co
                 https://api.groq.com
                 https://www.googletagmanager.com
                 https://www.google.com
+                https://www.gstatic.com
+                https://recaptcha.google.com
                 https://sandbox.wompi.co
                 https://production.wompi.co
-                https://checkout.wompi.co
-                https://fcvtjzkhwjqkygghttmg.supabase.co;
-    img-src     'self' data: blob: https://*.supabase.co https://www.google.com https://www.googletagmanager.com;
-    frame-src   https://www.google.com https://checkout.wompi.co;
+                https://checkout.wompi.co;
+    img-src     'self' data: blob:
+                https://*.supabase.co
+                https://www.google.com
+                https://www.gstatic.com
+                https://www.googletagmanager.com;
+    frame-src   https://www.google.com
+                https://recaptcha.google.com
+                https://checkout.wompi.co;
     worker-src  blob:;
     object-src  'none';
     base-uri    'self';
