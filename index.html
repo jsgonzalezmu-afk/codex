@@ -4,6 +4,31 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Minutas Legales Colombia</title>
+  <!-- ① CSP: bloquea scripts maliciosos externos no autorizados -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdn.jsdelivr.net
+                https://checkout.wompi.co
+                https://www.googletagmanager.com
+                https://www.google.com
+                https://www.gstatic.com;
+    style-src   'self' 'unsafe-inline';
+    connect-src 'self'
+                https://*.supabase.co
+                https://api.groq.com
+                https://www.googletagmanager.com
+                https://www.google.com
+                https://sandbox.wompi.co
+                https://production.wompi.co
+                https://checkout.wompi.co
+                https://fcvtjzkhwjqkygghttmg.supabase.co;
+    img-src     'self' data: blob: https://*.supabase.co https://www.google.com https://www.googletagmanager.com;
+    frame-src   https://www.google.com https://checkout.wompi.co;
+    worker-src  blob:;
+    object-src  'none';
+    base-uri    'self';
+  ">
 
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
